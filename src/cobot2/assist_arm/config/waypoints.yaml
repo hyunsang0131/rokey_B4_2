@@ -1,0 +1,54 @@
+# !!! 전부 자리표시(placeholder) — 직접교시 후 rokey_cobot2 get_current_pos 등으로 읽은 값으로 교체.
+# posx = [x, y, z, rx, ry, rz] (mm, deg, 두산 ZYZ), posj = [j1..j6] (deg). 테이블 좌표는 로봇 베이스 기준.
+home_j: [0, 0, 90, 0, 90, 0]                  # robot_control.init_robot 의 JReady 와 동일
+# 관찰 자세 (observe_table): 손목 RealSense 가 식탁 전체와 사용자 손을 내려다봄. 테이블 위 약 50~70cm
+# (D435i 최소 깊이 ~20cm 보다 충분히 멀게, 그릇·손이 화면 안에). 작업이 끝나면 여기로 돌아와 스냅샷 후 손동작 대기.
+table_view_j: [0, -10, 100, 0, 80, 0]
+
+workspace:                                     # 손 옆 내려놓기 등 목표 클리핑
+  min: [250.0, -450.0, 0.0]
+  max: [800.0, 450.0, 450.0]
+
+pour:
+  cup_spot: [450.0, -250.0]                    # 따르는 동안 컵을 두는 고정 자리 (x, y)
+  bottle_pos: [450.0, 250.0, 0.0, 0.0, 180.0, 0.0]   # 물병 거치대 (x, y 사용, 높이는 items.bottle)
+  pour_vel_mms: 60.0
+  pour_waypoints:                              # 직접교시 (물병 든 채: 컵 위 → 기울이기 → 세우기)
+    - [450.0, -200.0, 250.0, 0.0, 180.0, 0.0]
+    - [450.0, -220.0, 200.0, 0.0, 135.0, 0.0]
+    - [450.0, -200.0, 250.0, 0.0, 180.0, 0.0]
+
+wipe:
+  rag_pos: [300.0, 350.0, 0.0, 0.0, 180.0, 0.0]   # 걸레 놓는 자리 (집고 다시 둠)
+
+dance:                                         # 사람에게서 먼 작업공간, 저속. 로드 시 safe_box 검사
+  start_j: [0, -20, 100, 0, 60, 0]
+  beats_per_move: 2
+  max_speed_mms: 120.0
+  max_duration_sec: 45.0
+  safe_box: {min: [200.0, -300.0, 300.0], max: [450.0, 300.0, 650.0]}
+  waypoints:
+    - [350.0, -150.0, 450.0, 0.0, 180.0, 0.0]
+    - [350.0, 150.0, 450.0, 0.0, 180.0, 0.0]
+    - [300.0, 0.0, 550.0, 0.0, 160.0, 0.0]
+    - [350.0, 0.0, 400.0, 0.0, 180.0, 0.0]
+
+express:                                       # decision_node 제안 모션 (사람에게서 먼 높이, 저속)
+  speed_mms: 60.0
+  look_z_mm: 420.0
+  look_back_ratio: 0.25                        # 대상보다 로봇 쪽으로 25% 물러난 높은 곳에서 내려다봄
+  look_orientation: [0.0, 160.0, 0.0]
+  nod_mm: 20.0
+  nod_count: 2
+  retreat_mm: 80.0
+
+# ---- dry_run 테스트 전용 (실제 실행에는 쓰지 않음) ----
+dry_posx: [400.0, 0.0, 400.0, 0.0, 180.0, 0.0]
+dry_detections:
+  - {id: 1, cls: bowl,  xyz: [600.0, -100.0, 30.0], fill: 0.1}
+  - {id: 2, cls: bowl,  xyz: [620.0, 120.0, 30.0], fill: 0.8}
+  - {id: 3, cls: plate, xyz: [550.0, 0.0, 10.0], fill: 0.05}
+  - {id: 4, cls: cup,   xyz: [500.0, -200.0, 50.0], fill: 0.05}
+  - {id: 5, cls: spoon, xyz: [520.0, 200.0, 5.0]}
+dry_spill: {detected: true, label: liquid, position_valid: true, position: [600.0, 50.0, 0.0], size_mm: [60.0, 40.0]}
+dry_scene_spill: null    # 예: {detected: true, label: liquid, position_valid: true, position: [600.0, 50.0, 0.0]}

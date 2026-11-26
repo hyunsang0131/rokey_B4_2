@@ -1,0 +1,7 @@
+# 컵 수위 측정 설정 (tools/pour_level_roi.py 로 클릭해서 다시 만들 수 있음). !!! 자리표시 값
+source: webcam            # webcam (옆에서 보는 고정 카메라, 기본) / topic (RealSense 등 ROS 이미지 토픽)
+device: 2                 # 옆 카메라 번호 (노트북 웹캠이 0 이면 USB 캠은 보통 2)
+image_topic: /camera/color/image_raw
+roi: [256, 160, 384, 396] # 컵 안쪽 [x1, y1, x2, y2] (px)
+y_bottom: 395             # 컵 안쪽 바닥 (수위 0)
+y_full: 175               # '가득' 줄 (수위 1)

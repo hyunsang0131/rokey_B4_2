@@ -1,0 +1,13 @@
+# /cobot2/pour  (task_manager → skill_server pour 모듈). 수위 폐루프, Skill 과 동작 잠금 공유.
+# goal
+geometry_msgs/Pose cup_pose       # base_link (m·rad)
+geometry_msgs/Pose bottle_pose
+float32 target_ratio              # 목표 수위 0~1
+---
+# result
+float32 final_ratio
+bool success
+string error_code                 # Skill.Result.ERR_* 와 같은 값 (OK, BUSY, STOPPED, FAILED …)
+---
+# feedback
+float32 current_ratio

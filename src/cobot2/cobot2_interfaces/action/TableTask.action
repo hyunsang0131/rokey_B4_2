@@ -1,0 +1,19 @@
+# /cobot2/table_task  (task_manager → planner_node). 취소하면 현재 동작을 마친 뒤 멈춤.
+string TASK_SET_TABLE = "set_table"
+string TASK_CLEAR_TABLE = "clear_table"
+string PLANNER_RL = "rl"
+string PLANNER_RULE = "rule"
+
+# goal
+string task                   # TASK_*
+int32[] seat_ids
+string planner_type           # rl / rule
+---
+# result
+bool success
+int32 num_actions             # 실행한 동작 수
+string message
+---
+# feedback
+string stage                  # 진행 단계 (예: observe, pick, place, recover)
+int32 done_count              # 지금까지 끝낸 동작 수

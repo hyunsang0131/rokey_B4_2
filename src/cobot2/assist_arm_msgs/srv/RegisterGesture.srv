@@ -1,0 +1,8 @@
+# gesture_node 의 kNN 즉석 등록 서비스
+string label                 # 등록할 제스처 이름 (예: cup_request)
+float32 duration_sec         # 0 이면 파라미터 기본값(5초)
+bool clear                   # true 면 이 라벨의 기존 샘플 삭제 후 등록
+---
+bool success
+string message
+int32 num_samples

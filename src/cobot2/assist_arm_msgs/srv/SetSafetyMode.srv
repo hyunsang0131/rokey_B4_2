@@ -1,0 +1,5 @@
+# task_manager → safety_monitor (/safety/set_mode)
+string mode        # normal / dance
+---
+bool success
+string message

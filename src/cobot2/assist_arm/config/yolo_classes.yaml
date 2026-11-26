@@ -1,0 +1,18 @@
+# 식탁 물체 인식 (YOLO 커스텀 학습) 클래스. 순서 = YOLO 클래스 번호 (바꾸면 다시 학습).
+classes: [rice_bowl, side_dish, cup, water_bottle, spoon, chopsticks, tissue, cloth]
+
+# 자동 초벌 라벨: COCO 기본 모델(yolov8n.pt)이 찾은 것 → 우리 클래스. 사람은 웹 도구(Roboflow/CVAT)에서 고치기만.
+#   bowl 은 밥그릇/반찬그릇을 구분 못 해서 일단 rice_bowl 로 → 사람이 side_dish 로 고쳐 주세요.
+#   chopsticks / tissue / cloth 는 COCO 에 없어서 사람이 새로 박스 쳐야 해요.
+coco_map:
+  bowl: rice_bowl
+  cup: cup
+  wine glass: cup
+  bottle: water_bottle
+  spoon: spoon
+  fork: chopsticks        # 젓가락을 포크로 잘못 보는 경우가 많아 초벌로만 (꼭 확인)
+prelabel_conf: 0.25
+
+# 데이터 위치: 컨테이너에서도 보여야 해서 ~/corecode/yolo_train (컨테이너 /yolo_train) 아래에 둠
+dataset_dir: ~/corecode/yolo_train/assist_table
+container_dataset_dir: /yolo_train/assist_table

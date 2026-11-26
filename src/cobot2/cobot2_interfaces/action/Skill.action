@@ -1,0 +1,35 @@
+# /cobot2/skill  (planner_node → skill_server). 로봇 동작 한 단위, Pour 와 동작 잠금 공유.
+string SKILL_OBSERVE = "OBSERVE"
+string SKILL_PICK = "PICK"
+string SKILL_PLACE = "PLACE"
+string SKILL_HOME = "HOME"
+string SKILL_OPEN = "OPEN"
+string SKILL_CLOSE = "CLOSE"
+
+string PLACE_TABLE = "TABLE"
+string PLACE_STACK = "STACK"              # 더미
+string PLACE_UTENSIL_BIN = "UTENSIL_BIN"  # 수저통
+string PLACE_TEMP = "TEMP"                # 임시 자리
+
+# goal
+string skill                  # SKILL_*
+string place_type             # PLACE_* (PICK/PLACE 일 때)
+geometry_msgs/Pose pose       # 목표 위치·방향 (base_link, m·rad)
+string object_type            # ObjectTypes (PICK/PLACE 일 때)
+---
+# result
+string ERR_OK = "OK"
+string ERR_BUSY = "BUSY"                  # 다른 동작 중 (잠금)
+string ERR_STOPPED = "STOPPED"            # safety/stop 으로 중단·거절
+string ERR_FAILED = "FAILED"              # 일반 실패
+string ERR_NO_OBJECT = "NO_OBJECT"        # [문서 외 추가] 집기 실패 (그리퍼 폭으로 판단)
+string ERR_UNREACHABLE = "UNREACHABLE"    # [문서 외 추가] 위치 도달 불가 / 작업 공간 밖
+string ERR_INVALID_GOAL = "INVALID_GOAL"  # [문서 외 추가] 잘못된 목표 (모르는 스킬·장소)
+
+bool success
+string error_code             # ERR_*
+float32 contact_height        # 놓기에서 접촉 감지 높이 (m, base_link z)
+float32 gripper_width         # 동작 끝난 뒤 그리퍼 폭 (m)
+---
+# feedback
+string stage                  # 진행 단계 (예: approach, descend, grasp, lift)

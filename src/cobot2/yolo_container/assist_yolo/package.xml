@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>assist_yolo</name>
+  <version>0.1.0</version>
+  <description>보조 로봇팔: 모델 경로를 바꿀 수 있는 YOLO 3D 위치 서비스 (cup, 행주/휴지/물티슈). object_detection 재사용.</description>
+  <maintainer email="rokey@todo.todo">rokey</maintainer>
+  <license>TODO</license>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>od_msg</exec_depend>
+  <exec_depend>object_detection</exec_depend>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

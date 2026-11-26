@@ -1,0 +1,7 @@
+# /cobot2/perception/get_scene  (planner_node → perception_node)
+# 관측 자세에서 정지하고 그리퍼가 빈손일 때만 호출, 응답 1 s 이하
+string[] types                # 찾을 종류 (ObjectTypes, 비면 전부)
+---
+DetectedObject[] objects
+bool success
+string message

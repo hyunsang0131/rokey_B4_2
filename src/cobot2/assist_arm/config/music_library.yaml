@@ -1,0 +1,10 @@
+# 로컬 음악 목록 (외부 API 호출 없음). file 은 music_node.music_dir(~/data/assist_arm/music) 기준.
+# 파일이 없어도 bpm 으로 율동은 동작 (재생만 생략).
+moods:                               # 음성 키워드 → 분위기
+  신나는: [신나, 신나는, 흥, 댄스, 춤]
+  잔잔한: [잔잔, 조용, 편안, 차분]
+  밝은: [밝은, 기분좋, 행복]
+tracks:
+  - {title: 'Sample Upbeat', file: upbeat.mp3, bpm: 120, duration_sec: 40, moods: [신나는, 밝은]}
+  - {title: 'Sample Calm', file: calm.mp3, bpm: 80, duration_sec: 40, moods: [잔잔한]}
+  - {title: 'Sample Happy', file: happy.wav, bpm: 100, duration_sec: 40, moods: [밝은]}

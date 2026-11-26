@@ -1,0 +1,8 @@
+# 자리 영역 (base_link x, y — m). !!! 자리표시 값: 실제 테이블에서 재서 바꾸기.
+# 웹캠 → 테이블 좌표는 tools/calibrate_webcam_table.py 로 만든 캘리브레이션 파일을 씀.
+seats:
+  - {id: 1, center: [0.60, -0.30], size: [0.40, 0.35]}
+  - {id: 2, center: [0.60, 0.30], size: [0.40, 0.35]}
+# 로봇이 실제로 움직이는 영역 (예: 테이블 가운데 ~ 로봇 쪽). 로봇 MOVING 중 손·팔이 이 영역 + proximity_m 안이면 정지
+robot_zone: {center: [0.40, 0.0], size: [0.40, 0.50]}
+proximity_m: 0.20

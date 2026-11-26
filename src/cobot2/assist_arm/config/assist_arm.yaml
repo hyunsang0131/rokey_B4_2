@@ -1,0 +1,217 @@
+# assist_arm 전체 파라미터. launch 파일들이 이 파일을 읽는다. 경로의 ~ 는 노드 안에서 확장됨.
+webcam_publisher:
+  ros__parameters:
+    device: 0                 # 웹캠 번호 (v4l2-ctl --list-devices). 테이블+사용자 손이 보이게 고정 설치
+    width: 640
+    height: 480
+    fps: 30.0
+    topic: /webcam/image_raw
+    flip: false               # 호모그래피 캘리브레이션과 같은 설정이어야 함 (바꾸면 재캘리브레이션)
+
+pose_node:
+  ros__parameters:
+    source: webcam                      # webcam (노트북/USB 캠, webcam_publisher.device 로 선택) / realsense
+    image_topic: ''                     # 비우면 source 에 맞게 자동
+    landmarks_topic: /user/landmarks
+    enable_hands: true
+    enable_pose: true          # 팔(팔꿈치·손목) 근접 감시용
+    model_complexity: 0
+    num_hands: 2                          # 두 손 모두 (첫 번째 = 가장 확실한 손, 제스처·콕에 사용)
+    min_hand_detection_confidence: 0.5    # 손 '처음 찾기' 기준 (낮추면 잘 찾지만 오검출↑)
+    min_hand_presence_confidence: 0.5     # 손이 '아직 있다' 기준 (낮추면 덜 놓침)
+    min_hand_tracking_confidence: 0.5     # 추적 유지 기준 (낮추면 덜 끊김, 높이면 떨림↓·재검출↑)
+    max_rate_hz: 15.0
+    # mediapipe 1.x 는 Tasks API 만 있음 → 모델 파일 필요 (~/data/assist_arm/models 에 받아둠)
+    hand_task_model: ~/data/assist_arm/models/hand_landmarker.task
+    pose_task_model: ~/data/assist_arm/models/pose_landmarker_lite.task
+    show_debug: false
+
+gesture_node:
+  ros__parameters:
+    landmarks_topic: /user/landmarks    # 웹캠 (보조: 이동 중에는 '멈춰'만)
+    rs_landmarks_topic: /rs/landmarks   # RealSense (주: 관찰 자세에서 모든 제스처)
+    rs_timeout_sec: 0.5
+    gesture_topic: /user/gesture
+    seq_model_path: ~/data/assist_arm/models/gesture_seq.onnx            # Colab GRU 모션 모델 (없으면 건너뜀)
+    seq_labels_path: ~/data/assist_arm/models/gesture_seq_labels.json
+    model_path: ~/data/assist_arm/models/gesture_static.joblib           # 노트북 sklearn 정지 자세 (없으면 건너뜀)
+    labels_path: ''
+    priority: ['seq', 'knn', 'model', 'rule']
+    confirm_frames: 15        # 15fps ≈ 1초
+    min_confidence: 0.6
+    use_knn: true
+    knn_store_path: ~/data/assist_arm/knn_gestures.npz
+    knn_k: 3
+    knn_reject_dist: 1.5
+    register_default_sec: 5.0
+    palm_sign: 1.0            # stop(손바닥)/push(손등) 판정이 반대로 나오면 -1.0
+
+rs_hand_node:
+  ros__parameters:
+    require_observing: true             # 관찰 자세(로봇 정지)일 때만 RealSense 손 인식
+    rate_hz: 15.0
+    robot_id: dsr01
+    gripper2cam_path: ''
+    table_z_mm: 0.0                     # 깊이가 없을 때 대신 쓸 테이블 높이 (table_layout.yaml 과 같게)
+    min_depth_mm: 100.0
+    max_depth_mm: 1500.0
+    num_hands: 2
+    min_hand_detection_confidence: 0.5
+    min_hand_presence_confidence: 0.5
+    min_hand_tracking_confidence: 0.5
+    hand_task_model: ~/data/assist_arm/models/hand_landmarker.task
+    show_debug: false
+
+finger_pointer:
+  ros__parameters:
+    pointer_source: auto                # auto: 관찰 중 RealSense 3D, 아니면 웹캠 호모그래피 / realsense / webcam
+    rs_timeout_sec: 0.5
+    calibration_file: ~/data/assist_arm/pointer_calibration.yaml
+    dwell_sec: 1.0
+    dwell_radius_mm: 15.0
+    rearm_mm: 40.0
+    require_pointing: true
+    min_arm_visibility: 0.5
+
+request_router:
+  ros__parameters:
+    table_layout_file: ''
+    music_library_file: ''
+    poke_followup_sec: 3.0
+    poke_default: bring_dish
+    same_poke_mm: 60.0
+    combo_window_sec: 5.0
+    water_require_both: true
+    seat_poke_timeout_sec: 30.0
+    cooldown_sec: 3.0
+
+voice_command_node:
+  ros__parameters:
+    enabled: false                      # true: 'Hello Rokey' + STT 마이크 사용 (launch voice:=true 와 같음)
+    record_sec: 3
+
+spill_node:
+  ros__parameters:
+    robot_id: dsr01
+    gripper2cam_path: ''
+    table_roi: [0, 0, 0, 0]   # table_view 자세 RealSense 영상에서 테이블만 [x1,y1,x2,y2]
+    reference_path: ~/data/assist_arm/table_reference.npz
+    scan_frames: 10
+    diff_threshold: 25.0
+    min_area_px: 300
+    table_z_mm: 0.0
+    model_path: ''
+    show_debug: false
+
+music_node:
+  ros__parameters:
+    library_file: ''
+    music_dir: ~/data/assist_arm/music
+
+safety_monitor:
+  ros__parameters:
+    robot_id: dsr01
+    stop_mode: 1
+    call_dsr_stop: true
+    stop_words: ['멈춰', '정지', '스톱', 'stop']
+    required_nodes: ['webcam_publisher', 'pose_node', 'gesture_node', 'finger_pointer', 'task_manager']
+    heartbeat_timeout: 1.5
+    startup_grace: 15.0
+    pause_mm: 200.0
+    resume_margin_mm: 50.0
+    resume_delay_sec: 1.0
+    hand_height_mm: 40.0
+    hand_timeout_sec: 0.5
+    tcp_poll_hz: 10.0
+    dance_zone_mm: 500.0
+    dance_max_speed_mms: 150.0
+    speed_free_mms: 250.0
+    speed_near_human_mms: 100.0
+    speed_final_approach_mms: 40.0
+    wipe_force_n: 4.0
+    max_contact_force_n: 15.0
+
+task_manager:
+  ros__parameters:
+    robot_id: dsr01
+    robot_model: m0609
+    gripper_name: rg2
+    toolcharger_ip: 192.168.1.1
+    toolcharger_port: '502'
+    gripper2cam_path: ''
+    waypoints_file: ''        # 비우면 share/assist_arm/config/waypoints.yaml
+    table_layout_file: ''     # 비우면 share/assist_arm/config/table_layout.yaml
+    dry_run: false
+    dry_fake_detections: true
+    enable_bring_dish: true
+    enable_clear_dish: true
+    enable_clear_empty: true
+    enable_clear_all: true
+    enable_pour_water: true
+    enable_seat_setting: true
+    enable_music: true
+    enable_wipe_table: true
+    enable_scan_scene: true      # decision_node 의 주기적 장면 관찰
+    enable_express: true         # 제안 모션 (바라보기/끄덕/물러나기)
+    detection_service: /assist/get_3d_position
+    cup_class: cup
+    detect_retries: 3
+    settle_sec: 0.5
+    poke_radius_mm: 120.0
+    empty_fill_threshold: 0.3
+    max_clear_items: 8
+    seats_file: ~/data/assist_arm/seats.yaml
+    cup_near_hand_mm: 250.0   # 손에서 컵 내려놓는 거리 (mm). pause_mm(200) 보다 커야 멈추지 않음
+    speed_free_mms: 250.0
+    speed_near_human_mms: 100.0
+    speed_final_approach_mms: 40.0
+    dance_max_speed_mms: 150.0
+    joint_vel_dps: 60.0
+    wipe_force_n: 4.0
+    max_contact_force_n: 15.0
+    wipe_stiffness: [500.0, 500.0, 500.0, 100.0, 100.0, 100.0]
+    wipe_margin_mm: 30.0
+    wipe_max_amp_mm: 80.0
+    wipe_step_mm: 15.0
+    dab_sec: 1.5
+    open_on_fail: false
+    return_to_observe: true             # 작업 후 관찰 자세로 돌아가 식탁 스냅샷 + 손동작 대기
+    start_observing: true
+
+decision_node:
+  ros__parameters:
+    user_id: default            # 사람별 선호 파일 ~/data/assist_arm/decision/<user_id>.npz (/assist/user 로 바꿀 수 있음)
+    store_dir: ~/data/assist_arm/decision
+    enabled_actions: ['offer_water', 'offer_clear', 'offer_wipe', 'offer_tidy']
+    alpha: 0.6                  # LinUCB 탐험 정도
+    rule_weight: 1.0
+    offer_threshold: 0.7
+    offer_cooldown_sec: 60.0
+    same_offer_cooldown_sec: 180.0
+    response_window_sec: 8.0    # 엄지척(승낙)/손등 밀기(거절)/"네"/"아니" 기다리는 시간
+    no_answer_reward: -0.3
+    scan_period_sec: 90.0       # 한가할 때 장면 관찰(scan_scene) 요청 간격, 0 이면 끔
+    scene_max_age_sec: 120.0
+    hand_still_mm: 20.0
+    hand_idle_full_sec: 60.0
+    meal_full_min: 30.0
+    cup_empty_th: 0.2
+    dish_empty_th: 0.3
+    use_express: true           # 바라보기/끄덕/물러나기 모션
+
+claude_planner_node:
+  ros__parameters:
+    enabled: true
+    backend: local              # local (무료·오프라인, 기본) / claude (ANTHROPIC_API_KEY 있을 때만)
+    intents_file: ''            # 비우면 config/intents.yaml (예시 문장 추가하면 더 잘 알아들음)
+    local_ask_below: 0.45       # 유사도가 이보다 낮으면 되묻기
+    local_sure: 0.65            # 이보다 높으면 바로 실행, 사이면 "~할까요?" 확인
+    mock: false                 # backend=claude 일 때 API 호출 없이 가짜 응답 (dry_run)
+    model: claude-opus-5-5
+    effort: low                 # low / medium / high / xhigh / max (지연 ↔ 판단 깊이)
+    max_tokens: 1024
+    timeout_sec: 20.0
+    min_confidence: 0.6         # 미만이면 decision_node 가 "~할까요?" 로 확인 후 실행
+    enabled_skills: ['pour_water', 'bring_dish', 'clear_empty', 'clear_all', 'wipe_table', 'music']
+    table_layout_file: ''
+    music_library_file: ''
