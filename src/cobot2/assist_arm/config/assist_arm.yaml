@@ -120,6 +120,7 @@ safety_monitor:
     pause_mm: 200.0
     resume_margin_mm: 50.0
     resume_delay_sec: 1.0
+    auto_resume: false              # v2.2: 손이 빠져도 일시정지 유지 → 담당자 /safety/reset 으로 재개. 가림 검증 후 true
     hand_height_mm: 40.0
     hand_timeout_sec: 0.5
     tcp_poll_hz: 10.0

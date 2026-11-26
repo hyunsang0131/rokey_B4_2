@@ -3,8 +3,11 @@
 1) 일시정지 (자동 재개)
    사용자 손/팔(/user/hand_table 웹캠 호모그래피 — 상시, /rs/hand_table RealSense 3D — 관찰 자세)이 로봇 TCP 또는 현재 작업 지점(/assist/work_point)
    pause_mm(200) 안으로 들어오면 → /safety/pause=True + 두산 MovePause
-   pause_mm + resume_margin_mm 밖으로 resume_delay_sec 동안 벗어나 있으면 → /safety/pause=False + MoveResume
-2) 정지 (래치, /safety/reset 으로만 해제)
+   pause_mm + resume_margin_mm 밖으로 resume_delay_sec 동안 벗어나 있으면
+     auto_resume=true  → /safety/pause=False + MoveResume (자동 재개)
+     auto_resume=false → 일시정지 유지 (reason='pause_hold'), 담당자가 /safety/reset 을 부르면 MoveResume  [v2.2 기본값]
+     ※ 손 인식은 카메라라 가려짐을 '손이 빠짐'으로 볼 수 있음 → 실물에서 검증 전에는 auto_resume=false
+2) 정지 (래치, /safety/reset 으로만 해제. 해제는 '허가'일 뿐 로봇은 움직이지 않음 — 재개는 TaskRequest task='resume')
    - /user/gesture label=='stop' && confirmed (손바닥 내밀기)
    - /voice/command 에 stop_words 포함 ("멈춰")
    - /assist/heartbeat 에서 required_nodes 가 heartbeat_timeout 초 이상 끊김
@@ -49,6 +52,7 @@ class SafetyMonitor(Node):
         p('pause_mm', 200.0)
         p('resume_margin_mm', 50.0)
         p('resume_delay_sec', 1.0)
+        p('auto_resume', False)                    # v2.2: 시연·첫 실물 시험은 false (담당자 확인 후 /safety/reset)
         p('hand_height_mm', 40.0)                  # 테이블 평면 점을 이만큼 띄워서 3D 거리 계산
         p('hand_timeout_sec', 0.5)
         p('tcp_poll_hz', 10.0)
@@ -66,6 +70,7 @@ class SafetyMonitor(Node):
         self.dsr = DsrServices(self, robot_id=g('robot_id'))
         self.stopped, self.reason = False, ''
         self.paused, self.clear_since = False, None
+        self.pause_hold = False                    # auto_resume=false 에서 손은 빠졌지만 담당자 재개를 기다리는 중
         self.mode = 'normal'
         self.t0 = time.monotonic()
         self.last_hb = {}
@@ -147,6 +152,7 @@ class SafetyMonitor(Node):
         if on == self.paused:
             return
         self.paused = on
+        self.pause_hold = False
         if on:
             self.get_logger().warn(f'일시정지: {why}')
         else:
@@ -186,9 +192,14 @@ class SafetyMonitor(Node):
             if self.dist < 0 or self.dist > g('pause_mm') + g('resume_margin_mm'):
                 self.clear_since = self.clear_since or now
                 if now - self.clear_since >= g('resume_delay_sec'):
-                    self.set_pause(False)
+                    if g('auto_resume'):
+                        self.set_pause(False)
+                    elif not self.pause_hold:
+                        self.pause_hold = True
+                        self.get_logger().warn('손/팔이 벗어남 — 담당자 확인 후 /safety/reset 으로 재개 (auto_resume=false)')
             else:
                 self.clear_since = None
+                self.pause_hold = False
         if self.mode == 'dance':
             v = self._speed()
             if v is not None and v > g('dance_max_speed_mms') * 1.3:
@@ -203,6 +214,8 @@ class SafetyMonitor(Node):
         s = SafetyStatus()
         s.header.stamp = self.get_clock().now().to_msg()
         s.stop, s.reason, s.mode, s.paused = self.stopped, self.reason, self.mode, self.paused
+        if not self.stopped and self.pause_hold:
+            s.reason = 'pause_hold'                # 담당자 재개(/safety/reset) 대기
         s.hand_distance_mm = float(self.dist)
         self.status_pub.publish(s)
         g = lambda n: float(self.get_parameter(n).value)  # noqa: E731
@@ -213,10 +226,22 @@ class SafetyMonitor(Node):
         self.limits_pub.publish(String(data=json.dumps(lim)))
 
     def on_reset(self, req, res):
-        self.stopped, self.reason, self.mode = False, '', 'normal'
-        self.t0 = time.monotonic()
-        res.success, res.message = True, 'safety reset → normal 모드 (로봇 상태는 펜던트에서 확인)'
+        """담당자 버튼: ① 정지 래치 해제(허가만, 로봇은 안 움직임 → 재개는 task='resume') ② pause_hold 이면 MoveResume"""
+        if self.stopped:
+            self.stopped, self.reason, self.mode = False, '', 'normal'
+            self.t0 = time.monotonic()
+            res.success, res.message = True, ('정지 해제 → normal 모드. 로봇은 움직이지 않음 — '
+                                              '상태 확인 뒤 resume 요청으로 재개 (로봇 상태는 펜던트에서 확인)')
+        elif self.paused and self.pause_hold:
+            self.set_pause(False)
+            res.success, res.message = True, '일시정지 해제 (담당자 확인) → MoveResume'
+        elif self.paused:
+            res.success, res.message = False, f'손/팔이 아직 작업 지점 가까이 있음 ({self.dist:.0f}mm) — 재개 안 함'
+        else:
+            self.mode = 'normal'
+            res.success, res.message = True, '정지·일시정지 상태 아님 (normal 모드)'
         self.get_logger().warn(res.message)
+        self.publish()
         return res
 
 

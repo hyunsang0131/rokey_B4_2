@@ -10,6 +10,7 @@
   music        노래/율동                 → 곡 추천·재생 + 안전한 율동 웨이포인트
   wipe_table   닦아줘                    → 걸레로 테이블 얼룩 닦기 (힘제어)
   cancel       그만/취소                 → 현재 작업 중단 후 홈
+  resume       (v2.2) 정지 해제(/safety/reset) 뒤 담당자 확인 → 들고 있으면 임시 자리에 복구 → 다시 관찰
 상태: /assist/state (String), 안내: /assist/announce (String)
 안전: /safety/stop → SafetyAbort (자동 재개 없음), /safety/pause → 동작 대기 후 재개 (safety_monitor 가 MovePause/Resume)
 """
@@ -94,6 +95,7 @@ class TaskManager(Node, RobotIO):
 
         self.stop_flag = self.pause_flag = self.cancel_flag = False
         self.busy = False
+        self.holding = None                     # 그리퍼가 쥔 종류 (robot_io.pick/grip 이 갱신)
         self.request = None
         self.palm = None
         self.limits = {}
@@ -153,6 +155,9 @@ class TaskManager(Node, RobotIO):
         if m.task == 'cancel':
             if self.busy:
                 self.cancel_flag = True
+            return
+        if m.task == 'resume' and self.stop_flag:
+            self.say('먼저 정지를 해제해 주세요')
             return
         if m.task not in TASKS:
             self.get_logger().warn(f'모르는 작업: {m.task}')

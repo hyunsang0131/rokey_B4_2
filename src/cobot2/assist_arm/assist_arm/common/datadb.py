@@ -13,6 +13,11 @@ DB 파일: ~/data/assist_arm/assist_arm.db  (환경변수 ASSIST_ARM_DB 로 바�
   voice_utterances 음성/텍스트 요청 (전사, 의도, 슬롯 JSON, 확신도, 사람 확인 여부)
   models           학습된 모델 파일 (종류, 경로, 학습 데이터 조건, 지표 JSON)
   yolo_images      식탁 사진 (객체인식 학습용, 라벨 상태 none/auto/human, 박스 수, 분할)
+  -- v2.2 (세팅·정리 RL, 설계 문서 docs/ARCHITECTURE_v2.2.md 9장) --
+  episodes          작업 한 번 (모드, 계획 방식 rl/rule, 인원, 결과 상태 DONE/BLOCKED/…, 동작 수, 시간)
+  task_log          동작 한 번 (집기/놓기, 물체 종류, 출발·도착, 도착 더미 맨 위 종류, 성공, 오류 코드, 시간)
+  storage_inventory 보관 더미·수저통·임시 자리 안의 물체 (카메라로 안 보이는 것의 기준, level 0 = 맨 아래)
+  user_pref         사용자 선호 (자리, 왼손잡이 등)
 
 사용 예
   from assist_arm.common.datadb import DataDB
@@ -27,7 +32,7 @@ import sqlite3
 import time
 
 DEFAULT_DB = os.path.expanduser(os.environ.get('ASSIST_ARM_DB', '~/data/assist_arm/assist_arm.db'))
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -65,6 +70,24 @@ CREATE TABLE IF NOT EXISTS yolo_images (
 CREATE INDEX IF NOT EXISTS idx_gs_label ON gesture_samples(label);
 CREATE INDEX IF NOT EXISTS idx_gs_session ON gesture_samples(session_id);
 CREATE INDEX IF NOT EXISTS idx_de_action ON decision_events(action);
+CREATE TABLE IF NOT EXISTS episodes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  started_at TEXT, ended_at TEXT,
+  mode TEXT CHECK (mode IN ('clear', 'set_table')), planner TEXT CHECK (planner IN ('rl', 'rule')),
+  people INTEGER,
+  status TEXT CHECK (status IN ('DONE', 'BLOCKED', 'PERCEPTION_FAIL', 'ABORTED') OR status IS NULL),
+  success INTEGER, reason TEXT, n_actions INTEGER DEFAULT 0, duration_s REAL);
+CREATE TABLE IF NOT EXISTS task_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  episode_id INTEGER REFERENCES episodes(id), ts TEXT,
+  skill TEXT, object_type TEXT, src TEXT, dst TEXT, dst_top_type TEXT,
+  success INTEGER, error_code TEXT, duration_s REAL);
+CREATE TABLE IF NOT EXISTS storage_inventory (
+  location TEXT NOT NULL, level INTEGER NOT NULL, object_type TEXT NOT NULL, updated_at TEXT,
+  PRIMARY KEY (location, level));
+CREATE TABLE IF NOT EXISTS user_pref (
+  user TEXT NOT NULL, key TEXT NOT NULL, value TEXT, updated_at TEXT, PRIMARY KEY (user, key));
+CREATE INDEX IF NOT EXISTS idx_tl_episode ON task_log(episode_id);
 """
 
 
@@ -89,7 +112,8 @@ class DataDB:
                 c.execute('PRAGMA journal_mode=WAL')
                 self._migrate(c)
                 c.executescript(SCHEMA)
-                c.execute("INSERT OR IGNORE INTO meta(key, value) VALUES ('schema_version', ?)", (str(SCHEMA_VERSION),))
+                c.execute("INSERT OR REPLACE INTO meta(key, value) VALUES ('schema_version', ?)",
+                          (str(SCHEMA_VERSION),))
             self.ok = True
         except Exception as e:  # noqa: BLE001
             self._warn(f'DB 열기 실패 ({self.path}): {e}')
@@ -212,9 +236,102 @@ class DataDB:
         except Exception as e:  # noqa: BLE001
             self._warn(f'삭제 실패: {e}')
 
+    # ------------------------------------------------------------ v2.2: 작업 기록 (세팅·정리)
+    def _exec(self, sql, params=(), what='기록'):
+        if not self.ok:
+            return None
+        try:
+            with self._conn() as c:
+                return c.execute(sql, params).rowcount
+        except Exception as e:  # noqa: BLE001
+            self._warn(f'{what} 실패: {e}')
+            return None
+
+    def start_episode(self, mode, planner='rule', people=None):
+        """작업 한 번 시작 → episode id (실패 시 None)"""
+        return self._insert('episodes', {'started_at': now_iso(), 'mode': mode, 'planner': planner,
+                                         'people': people})
+
+    def finish_episode(self, episode_id, status, reason='', n_actions=None, duration_s=None):
+        """status: DONE / BLOCKED / PERCEPTION_FAIL / ABORTED. success 는 DONE 일 때만 1"""
+        if episode_id is None:
+            return None
+        return self._exec('UPDATE episodes SET ended_at=?, status=?, success=?, reason=?, '
+                          'n_actions=COALESCE(?, n_actions), duration_s=? WHERE id=?',
+                          (now_iso(), status, int(status == 'DONE'), reason, n_actions, duration_s, episode_id),
+                          'episode 종료 기록')
+
+    def log_task(self, episode_id, skill, object_type, src='', dst='', dst_top_type='', success=True,
+                 error_code='OK', duration_s=None):
+        """동작 한 번 (pick / place / place_stack …). 성공한 동작이면 episodes.n_actions 도 1 증가"""
+        rid = self._insert('task_log', {
+            'episode_id': episode_id, 'ts': now_iso(), 'skill': skill, 'object_type': object_type, 'src': src,
+            'dst': dst, 'dst_top_type': dst_top_type or '', 'success': int(bool(success)),
+            'error_code': error_code, 'duration_s': duration_s})
+        if rid is not None and success and episode_id is not None:
+            self._exec('UPDATE episodes SET n_actions = n_actions + 1 WHERE id=?', (episode_id,), 'n_actions')
+        return rid
+
+    # ------------------------------------------------------------ v2.2: 보관 재고 (포개진 그릇은 안 보이므로 DB 가 기준)
+    def inventory(self, location=None):
+        """location 을 주면 그 자리의 [아래 → 위] 종류 목록, 안 주면 {location: [...]}"""
+        if location is not None:
+            return [r['object_type'] for r in self.query(
+                'SELECT object_type FROM storage_inventory WHERE location=? ORDER BY level', (location,))]
+        out = {}
+        for r in self.query('SELECT location, object_type FROM storage_inventory ORDER BY location, level'):
+            out.setdefault(r['location'], []).append(r['object_type'])
+        return out
+
+    def inventory_push(self, location, object_type):
+        """맨 위에 하나 올림 → 새 level (실패 시 None)"""
+        n = len(self.inventory(location))
+        return n if self._insert('storage_inventory', {'location': location, 'level': n, 'object_type': object_type,
+                                                       'updated_at': now_iso()}) is not None else None
+
+    def inventory_pop(self, location):
+        """맨 위 하나 꺼냄 → 그 종류 (비어 있거나 실패면 None)"""
+        items = self.inventory(location)
+        if not items:
+            return None
+        ok = self._exec('DELETE FROM storage_inventory WHERE location=? AND level=?', (location, len(items) - 1),
+                        '재고 꺼내기')
+        return items[-1] if ok else None
+
+    def inventory_set(self, location, object_types):
+        """한 자리의 내용을 통째로 바꿈 (시작 전 초기 재고 입력, 사람이 정리한 뒤 맞추기)"""
+        if not self.ok:
+            return False
+        try:
+            with self._conn() as c:
+                c.execute('DELETE FROM storage_inventory WHERE location=?', (location,))
+                c.executemany('INSERT INTO storage_inventory (location, level, object_type, updated_at) '
+                              'VALUES (?, ?, ?, ?)',
+                              [(location, i, t, now_iso()) for i, t in enumerate(object_types)])
+            return True
+        except Exception as e:  # noqa: BLE001
+            self._warn(f'재고 설정 실패: {e}')
+            return False
+
+    # ------------------------------------------------------------ v2.2: 사용자 선호
+    def set_pref(self, user, key, value):
+        return self._exec('INSERT INTO user_pref (user, key, value, updated_at) VALUES (?, ?, ?, ?) '
+                          'ON CONFLICT(user, key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at',
+                          (user, key, json.dumps(value, ensure_ascii=False), now_iso()), '선호 기록')
+
+    def get_pref(self, user, key, default=None):
+        r = self.query('SELECT value FROM user_pref WHERE user=? AND key=?', (user, key))
+        if not r:
+            return default
+        try:
+            return json.loads(r[0]['value'])
+        except ValueError:
+            return r[0]['value']
+
     def counts(self):
         out = {}
-        for t in ('sessions', 'gesture_samples', 'clips', 'decision_events', 'voice_utterances', 'models', 'yolo_images'):
+        for t in ('sessions', 'gesture_samples', 'clips', 'decision_events', 'voice_utterances', 'models',
+                  'yolo_images', 'episodes', 'task_log', 'storage_inventory', 'user_pref'):
             r = self.query(f'SELECT COUNT(*) AS n FROM {t}')
             out[t] = r[0]['n'] if r else 0
         return out

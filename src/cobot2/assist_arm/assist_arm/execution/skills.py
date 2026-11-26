@@ -286,11 +286,18 @@ def observe_table(tm, args):
     tm.say('보고 있어요') if args.get('announce') else None
 
 
+def resume(tm, args):
+    """v2.2 6.2: 정지 해제 뒤 담당자 확인으로 다시 시작. 멈춘 궤적을 이어 가지 않는다:
+    들고 있으면 임시 자리에 내려놓고(6.4), 끝나면 run 루프가 go_rest() 로 관찰 자세에서 다시 본다."""
+    if not tm.recover_holding():
+        tm.say('다시 볼게요')
+
+
 TASKS = {
     'observe_table': observe_table,
     'bring_dish': bring_dish, 'clear_dish': clear_dish, 'clear_empty': clear_empty, 'clear_all': clear_all,
     'pour_water': pour_water, 'seat_setting': seat_setting, 'music': music, 'wipe_table': wipe_table,
-    'scan_scene': scan_scene, 'express': express,
+    'scan_scene': scan_scene, 'express': express, 'resume': resume,
 }
 # 끝나고 홈으로 돌아가지 않는 작업 (짧은 표현 모션은 제자리 유지)
 NO_HOME = {'express', 'observe_table', 'scan_scene'}   # 끝나도 그 자리 유지

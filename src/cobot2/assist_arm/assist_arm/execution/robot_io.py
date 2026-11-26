@@ -131,6 +131,8 @@ class RobotIO:
 
     def grip(self, close, width=None):
         self.check()
+        if not close:
+            self.holding = None                   # 열면 빈손 (v2.2: 들고 있을 때 복구 판단용)
         if self.gripper is None:
             self.get_logger().info(f'(dry) gripper {"close" if close else "open"}'
                                    + (f' width={width}' if width else ''))
@@ -168,6 +170,7 @@ class RobotIO:
         self.movel(pre, vf)
         self.movel(grasp, vf * 0.4)
         self.grip(True)
+        self.holding = item
         self.movel(pre, vf * 0.6)
 
     def place(self, item, xy, slow=False):
@@ -189,6 +192,20 @@ class RobotIO:
         xyz = np.array(r['pos'][:3]) + k * np.array(r.get('step', [0, 0, 0]))
         self.rack_used[item] = k + 1
         self.pick(item, xyz)
+
+    def recover_holding(self):
+        """v2.2 6.4: 물체를 쥔 채 작업이 끊겼을 때 → 비어 있는 임시 자리에 내려놓기. 내려놓았으면 True"""
+        item = getattr(self, 'holding', None)
+        if not item:
+            return False
+        slots = (self.layout.get('storage', {}) or {}).get('temp_slots', {}) or {}
+        if not slots:
+            raise TaskFailed(f'{item} 을(를) 들고 있지만 임시 자리 설정이 없음 — 사람이 직접 빼 주세요')
+        name, cfg = next(iter(slots.items()))
+        self.state_note('RECOVER', f'{item} → {name}')
+        self.say('들고 있던 것을 먼저 내려놓을게요')
+        self.place(item, list(cfg['pos'][:2]), slow=True)
+        return True
 
     def clear_slot(self):
         st = self.layout['clear_station']
