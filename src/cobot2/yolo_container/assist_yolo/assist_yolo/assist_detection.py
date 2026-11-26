@@ -17,7 +17,7 @@
 model_path 기본 yolov8n.pt (COCO: cup 41, fork 42, knife 43, spoon 44, bowl 45, bottle 39) — 첫 실행 시 다운로드.
   (이미 받아 둔 파일: /yolo_train/Fruits/yolov8n.pt — -p model_path:=/yolo_train/Fruits/yolov8n.pt 로 다운로드 없이)
 식탁 커스텀 모델 (assist_arm/tools/colab_yolo_train.ipynb 로 학습): 호스트 ~/corecode/yolo_train/assist_table/best.pt
-  → -p model_path:=/yolo_train/assist_table/best.pt  (클래스: rice_bowl side_dish cup water_bottle spoon chopsticks tissue cloth)
+  → -p model_path:=/yolo_train/assist_table/best.pt  (클래스: rice_bowl side_dish cup water_bottle spoon chopsticks tissue cloth soup_bowl plate fork — 순서는 config/yolo_classes.yaml)
   모델에 그 이름이 있으면 별칭보다 먼저 씀 → aliases 는 그대로 둬도 됨.
 """
 import cv2

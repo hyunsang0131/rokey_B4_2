@@ -1,8 +1,12 @@
 # 식탁 물체 인식 (YOLO 커스텀 학습) 클래스. 순서 = YOLO 클래스 번호 (바꾸면 다시 학습).
-classes: [rice_bowl, side_dish, cup, water_bottle, spoon, chopsticks, tissue, cloth]
+# v2.2: soup_bowl(국그릇), plate(메인 접시), fork 를 맨 뒤 8~10번에 추가 — 기존 0~7번 라벨은 그대로 유효.
+#       중간에 끼워 넣지 말 것 (번호가 밀려 기존 라벨이 전부 틀어짐). 새 3종은 라벨링 → 재학습해야 인식됨.
+#       'bowl'(밥/국 모름)은 학습 클래스로 두지 않음: COCO 기본 모델·별칭에서만 나오고, table_planner 가 위치로 판정.
+classes: [rice_bowl, side_dish, cup, water_bottle, spoon, chopsticks, tissue, cloth, soup_bowl, plate, fork]
 
 # 자동 초벌 라벨: COCO 기본 모델(yolov8n.pt)이 찾은 것 → 우리 클래스. 사람은 웹 도구(Roboflow/CVAT)에서 고치기만.
-#   bowl 은 밥그릇/반찬그릇을 구분 못 해서 일단 rice_bowl 로 → 사람이 side_dish 로 고쳐 주세요.
+#   bowl 은 밥그릇/국그릇/반찬그릇을 구분 못 해서 일단 rice_bowl 로 → 사람이 soup_bowl / side_dish 로 고쳐 주세요.
+#   COCO 에 plate 가 없어서 접시는 사람이 새로 박스 쳐야 해요.
 #   chopsticks / tissue / cloth 는 COCO 에 없어서 사람이 새로 박스 쳐야 해요.
 coco_map:
   bowl: rice_bowl
@@ -10,7 +14,7 @@ coco_map:
   wine glass: cup
   bottle: water_bottle
   spoon: spoon
-  fork: chopsticks        # 젓가락을 포크로 잘못 보는 경우가 많아 초벌로만 (꼭 확인)
+  fork: fork              # v2.2: fork 클래스 추가. 젓가락을 포크로 잘못 보는 경우가 많으니 초벌은 꼭 확인
 prelabel_conf: 0.25
 
 # 데이터 위치: 컨테이너에서도 보여야 해서 ~/corecode/yolo_train (컨테이너 /yolo_train) 아래에 둠

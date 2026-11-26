@@ -116,7 +116,7 @@ python3 ~/cobot2_ws/src/cobot2/assist_arm/tools/eval_cross_source.py [--fake]
 
 ## ⑤-2 객체인식(YOLO) 학습 — 그릇·컵·물병·수저·젓가락·휴지·행주
 
-클래스 (`config/yolo_classes.yaml`): rice_bowl, side_dish, cup, water_bottle, spoon, chopsticks, tissue, cloth
+클래스 (`config/yolo_classes.yaml`): rice_bowl, side_dish, cup, water_bottle, spoon, chopsticks, tissue, cloth, soup_bowl, plate, fork (v2.2에서 뒤 3개 추가, 재학습 필요)
 지금 쓰는 모델: 컨테이너 `assist_detection` 기본 = COCO yolov8n (bowl·cup·bottle·spoon 만, 밥그릇/반찬 구분·젓가락·휴지·행주 없음)
 데이터 위치: `~/corecode/yolo_train/assist_table/` (컨테이너에서 `/yolo_train/assist_table` 로 보임)
 
