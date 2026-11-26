@@ -54,6 +54,11 @@ def _stack_height(tm, item):
     return float((tm.layout.get('storage', {}) or {}).get('stack_height_mm', {}).get(item, 15.0))
 
 
+def _loc_z(tm, name):
+    """보관 자리의 높이 (식탁 기준 mm, 선반은 -2). 테이블 위 자리('seat1:...')는 0"""
+    return float(tm.planner.location(name).get('z_mm', 0.0))
+
+
 def _blocked_text(reason, mode):
     kinds = {r.split(':')[-1] for r in reason.split(';') if r}
     why = ', '.join(sorted({REASON_KO.get(k, k) for k in kinds}))
@@ -83,7 +88,7 @@ class Executor:
             z_off = 0.0
         else:                                          # 보관 자리 맨 위 (세팅)
             xyz = np.array(list(a.src_xy) + [0.0], float)
-            z_off = max(0, len(tm.db.inventory(a.src)) - 1) * _stack_height(tm, a.item)
+            z_off = _loc_z(tm, a.src) + max(0, len(tm.db.inventory(a.src)) - 1) * _stack_height(tm, a.item)
         try:
             tm.pick(a.item, xyz, z_offset=z_off)
         except TaskFailed as e:
@@ -98,7 +103,7 @@ class Executor:
         # 놓기
         t1 = time.monotonic()
         skill = {'stack': 'place_stack', 'holder': 'place_holder'}.get(a.dst_site, 'place')
-        z_off = a.dst_count * _stack_height(tm, a.item) if a.dst_site == 'stack' else 0.0
+        z_off = _loc_z(tm, a.dst) + (a.dst_count * _stack_height(tm, a.item) if a.dst_site == 'stack' else 0.0)
         try:
             tm.place(a.item, list(a.dst_xy), z_offset=z_off)
         except TaskFailed as e:

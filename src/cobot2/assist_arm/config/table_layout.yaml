@@ -49,25 +49,32 @@ foods:                               # 음식 그릇 ("<음식> 줘", 자리 세
 clear_station:                       # 정리 위치 (설거지 트레이). 차례로 사용
   slots: [[300.0, -300.0], [300.0, -230.0], [360.0, -300.0], [360.0, -230.0]]
 
-# ---------------------------------------------------------------- v2.2 세팅·정리 (table_planner, docs/ARCHITECTURE_v2.2.md)
-# !!! 좌표는 전부 자리표시 — 실제 테이블에서 교시해 교체. 내용(무엇이 몇 개)은 DB storage_inventory 가 기준.
+# ---------------------------------------------------------------- v2.2 세팅·정리 (table_planner, docs/ARCHITECTURE_v2.3.md)
+# 보관 자리는 식탁 오른쪽 선반 위 (2026-11-26 실측: 선반 윗면 = 식탁 -2 mm,
+#   선반 폭 y = -323.94 ~ -623.94 mm (x = 274.81 에서 측정), 길이는 식탁과 나란히 x 방향).
+# 좌표는 '팔이 위에서 수직으로 집을 수 있는 범위(베이스에서 800 mm 이내)' 로 계산한 값 → 실물 교시로 최종 확인.
+#   y=-400 줄은 x 693 mm 까지, y=-550 줄은 x 581 mm 까지 닿음. z_mm = 식탁(table_z_mm) 기준 높이.
+# 내용(무엇이 몇 개)은 DB storage_inventory 가 기준.
 storage:
-  stacks:                            # 그릇을 포개 두는 보관 더미. 칸마다 종류 고정 (1.2 위치 기반 구분)
-    stack_A: {type: soup_bowl, pos: [300.0, -300.0], max: 4}
-    stack_B: {type: rice_bowl, pos: [300.0, -230.0], max: 4}
-    stack_C: {type: plate,     pos: [360.0, -300.0], max: 4}
-  holders:                           # 수저통 칸 (세워서 꽂음)
-    holder_spoon: {type: spoon, pos: [360.0, -230.0], max: 4}
-    holder_fork:  {type: fork,  pos: [360.0, -200.0], max: 4}
+  stacks:                            # 그릇을 포개 두는 보관 더미 (선반 안쪽 줄 y=-400). 칸마다 종류 고정 (1.2)
+    stack_A: {type: soup_bowl, pos: [300.0, -400.0], z_mm: -2.0, max: 4}   # 베이스에서 500 mm
+    stack_B: {type: rice_bowl, pos: [450.0, -400.0], z_mm: -2.0, max: 4}   # 602 mm
+    stack_C: {type: plate,     pos: [620.0, -400.0], z_mm: -2.0, max: 4}   # 738 mm (접시가 넓어 간격을 더 둠)
+  holders:                           # 수저통 칸 (세워서 꽂음, 선반 바깥 줄)
+    holder_spoon: {type: spoon, pos: [300.0, -515.0], z_mm: -2.0, max: 4}  # 596 mm
+    holder_fork:  {type: fork,  pos: [300.0, -585.0], z_mm: -2.0, max: 4}  # 657 mm
   temp_slots:                        # 종류가 애매하거나(밥/국 모름) 컵, 더미가 가득 찼을 때 두는 자리
-    temp_1: {pos: [420.0, -300.0]}
-    temp_2: {pos: [420.0, -230.0]}
-    temp_3: {pos: [480.0, -300.0]}
-    temp_4: {pos: [480.0, -230.0]}
+    temp_1: {pos: [150.0, -400.0], z_mm: -2.0}   # 427 mm
+    temp_2: {pos: [150.0, -550.0], z_mm: -2.0}   # 570 mm
+    temp_3: {pos: [440.0, -550.0], z_mm: -2.0}   # 704 mm
+    temp_4: {pos: [560.0, -550.0], z_mm: -2.0}   # 785 mm (한계 근처)
   stack_height_mm:                   # 포갤 때 한 개당 높아지는 양 — 그릇 실측 후 교체
     rice_bowl: 15.0
     soup_bowl: 15.0
     plate: 8.0
+planner_workspace:                   # table_planner 가 '팔이 닿는다' 고 보는 범위 (식탁 + 오른쪽 선반).
+  min: [100.0, -640.0, 0.0]          # waypoints.workspace(손 옆 내려놓기 클리핑용)와 따로 둠
+  max: [800.0, 450.0, 450.0]
 type_match_radius_mm: 60.0           # 정리 때 'bowl' 을 자리 템플릿 위치로 밥/국 구분하는 허용 반경
 clear_classes: [rice_bowl, soup_bowl, bowl, plate, cup, spoon, fork]   # 정리 대상 (table_planner). 컵은 임시 자리로
 initial_inventory:                   # tools/inventory.py seed 가 DB 에 넣는 시작 재고 (세팅 전 보관 상태)

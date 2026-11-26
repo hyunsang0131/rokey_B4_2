@@ -10,7 +10,7 @@ from assist_arm.execution.table_planner import (  # noqa: E402
     ACT, BLOCKED, DONE, EATING, PERCEPTION_FAIL, SEAT_DONE, History, TablePlanner, seat_slots)
 
 LAYOUT = yaml.safe_load(open(os.path.join(os.path.dirname(__file__), '..', 'config', 'table_layout.yaml')))
-WORKSPACE = {'min': [150.0, -600.0, 0.0], 'max': [800.0, 600.0, 500.0]}
+WORKSPACE = LAYOUT['planner_workspace']
 SEAT1 = [600.0, -150.0]
 SEAT2 = [600.0, 150.0]
 

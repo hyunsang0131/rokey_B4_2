@@ -99,7 +99,8 @@ class TaskManager(Node, RobotIO):
         self.stop_flag = self.pause_flag = self.cancel_flag = False
         self.busy = False
         self.holding = None                     # 그리퍼가 쥔 종류 (robot_io.pick/grip 이 갱신)
-        self.planner = TablePlanner(self.layout, workspace=self.wp.get('workspace'))   # v2.2 결정 모듈
+        self.planner = TablePlanner(self.layout, workspace=self.layout.get('planner_workspace',
+                                                                           self.wp.get('workspace')))   # v2.2 결정 모듈
         self.db = DataDB(quiet=False)           # v2.2 작업 기록·보관 재고 (~/data/assist_arm/assist_arm.db)
         self.request = None
         self.palm = None

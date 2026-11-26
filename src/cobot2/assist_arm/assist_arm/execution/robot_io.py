@@ -207,7 +207,7 @@ class RobotIO:
         name, cfg = next(iter(slots.items()))
         self.state_note('RECOVER', f'{item} → {name}')
         self.say('들고 있던 것을 먼저 내려놓을게요')
-        self.place(item, list(cfg['pos'][:2]), slow=True)
+        self.place(item, list(cfg['pos'][:2]), slow=True, z_offset=float(cfg.get('z_mm', 0.0)))
         return True
 
     def clear_slot(self):

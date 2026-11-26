@@ -26,7 +26,7 @@ class FakeTM:
 
     def __init__(self, db, dets, fail_pick=0, abort_at=None):
         self.db, self.layout = db, LAYOUT
-        self.planner = TablePlanner(LAYOUT, workspace=WP['workspace'])
+        self.planner = TablePlanner(LAYOUT, workspace=LAYOUT['planner_workspace'])
         self.dets = dets
         self.dry_removed, self.holding, self.at_observe = set(), None, False
         self.fail_pick, self.abort_at = fail_pick, abort_at
@@ -89,7 +89,7 @@ def test_clear_stacks_by_type_and_logs(db):
     assert inv['stack_B'] == ['rice_bowl', 'rice_bowl']          # bowl 은 자리 템플릿으로 밥그릇 판정
     assert inv['holder_spoon'] == ['spoon']
     places = [m for m in tm.moves if m[0] == 'place' and m[1] == 'rice_bowl']
-    assert places[0][3] == 0.0 and places[1][3] == 15.0           # 두 번째는 한 개 높이만큼 위에 포갬
+    assert places[0][3] == -2.0 and places[1][3] == 13.0          # 선반(-2 mm), 두 번째는 한 개 높이만큼 위
     e = db.query('SELECT * FROM episodes')[0]
     assert e['status'] == 'DONE' and e['success'] == 1 and e['n_actions'] == 3     # 옮긴 물체 3개
     assert len(db.query('SELECT 1 FROM task_log')) == 6                            # pick·place 3쌍
@@ -132,7 +132,7 @@ def test_set_table_uses_inventory(db):
     picked = [m[1] for m in tm.moves if m[0] == 'pick']
     assert sorted(picked) == sorted(need)
     rice_pick = next(m for m in tm.moves if m[0] == 'pick' and m[1] == 'rice_bowl')
-    assert rice_pick[2] == 15.0                                   # 2개 쌓인 더미 맨 위에서 집기
+    assert rice_pick[2] == 13.0                                   # 선반(-2) 위 2개 쌓인 더미의 맨 위
     assert len(db.inventory('stack_B')) == 1
 
 

@@ -446,6 +446,7 @@ CREATE TABLE user_pref (user TEXT, key TEXT, value TEXT, PRIMARY KEY (user, key)
 | **실행기** `run_plan()`: 관찰 → `next_action` → 집기·놓기 → DB 기록(`episodes`, `task_log`, `storage_inventory`) → 반복. 상태별 안내(DONE / BLOCKED 이유 / PERCEPTION_FAIL 재관측 2회), 동작 실패는 기록 후 재관측(연속 3회면 중단), 정지·취소는 ABORTED | `execution/executor.py` | **완료**, 단위 시험 7개 + dry_run 확인 |
 | `clear_dish`(콕, 1개), `clear_empty`(자리 번호 또는 전부), `clear_all`, `seat_setting`(보관 재고에서, 먼 자리부터)을 실행기로 연결. 파라미터 `use_planner`(기본 true, false = 예전 방식) | `execution/skills.py`, `task_manager.py`, `config/assist_arm.yaml` | **완료** |
 | 포개기 최소 버전: 더미 위에 놓을 때 `개수 × stack_height_mm`만큼 높게, 더미 맨 위에서 꺼낼 때도 같은 높이 (`pick`/`place`의 `z_offset`). **접촉 감지 하강은 실물 단계에서** | `execution/robot_io.py` | 최소 버전 완료 |
+| **선반 반영 (11-26 실측)**: 보관 자리를 식탁 오른쪽 선반 위로 (선반 윗면 = 식탁 −2 mm, 폭 y −323.94 ~ −623.94). 보관 자리마다 높이 `z_mm` 지원(집기·놓기·복구에 반영). 팔이 위에서 닿는 범위(베이스 800 mm 이내)로 배치: 안쪽 줄 y −400에 국·밥·접시 더미, 바깥 줄에 수저통 2칸, 임시 자리 4곳. `table_planner` 전용 범위 `planner_workspace`(손 옆 내려놓기 범위와 분리) | `config/table_layout.yaml`, `executor.py`, `table_planner.py`, `robot_io.py`, `task_manager.py` | **완료** (좌표는 계산값, 실물 교시로 확인) |
 | 보관 재고 도구: `tools/inventory.py show / seed / set / clear / episodes` (시작 재고는 `table_layout.yaml`의 `initial_inventory`) | `tools/inventory.py` | **완료** |
 | 설정: 임시 자리 4곳, 정리 대상에 컵 추가(임시 자리로), 세팅 템플릿에 포크 추가. 젓가락은 보관 자리가 없어 실행기 세팅에서 건너뜀 | `config/table_layout.yaml` | 완료 (좌표는 자리표시) |
 | 단위 실측 검증, 시각화 변환(`viz_bridge`) | — | 다음 단계 |

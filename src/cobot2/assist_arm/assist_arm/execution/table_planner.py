@@ -121,6 +121,13 @@ class TablePlanner:
     def _places(self, kind):
         return self.storage.get(kind, {}) or {}
 
+    def location(self, name):
+        """보관 자리 이름 → 설정 (stacks / holders / temp_slots 어디든). 없으면 {}"""
+        for kind in ('stacks', 'holders', 'temp_slots'):
+            if name in self._places(kind):
+                return self._places(kind)[name]
+        return {}
+
     def storable(self):
         """보관 자리(더미·수저통)가 설정된 종류. 세팅은 이 종류만 맡는다 (예: 젓가락은 범위 밖 → 건너뜀)"""
         return {c.get('type') for kind in ('stacks', 'holders') for c in self._places(kind).values()}
