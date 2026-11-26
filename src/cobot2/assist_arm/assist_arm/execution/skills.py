@@ -12,6 +12,7 @@ import yaml
 from std_msgs.msg import Empty, String
 from std_srvs.srv import Trigger
 
+from assist_arm.execution.executor import load_seats, run_plan
 from assist_arm.execution.robot_io import TaskFailed
 
 
@@ -58,8 +59,21 @@ def bring_dish(tm, args):
     tm.place(item, tm.user_front(), slow=True)
 
 
+def _done_seats(args):
+    """요청 args 의 seats 가 자리 번호 목록이면 그 자리만 '다 먹음', 없으면 전부"""
+    s = args.get('seats')
+    if isinstance(s, list) and s and all(isinstance(v, int) for v in s):
+        return set(s)
+    return None
+
+
 # ---------------------------------------------------------------------- 2. 콕 + 치워 → 그 그릇 정리
 def clear_dish(tm, args):
+    if tm.g('use_planner'):                          # v2.2: table_planner 가 목적지(더미·임시 자리) 결정
+        if 'point' not in args:
+            raise TaskFailed('clear_dish: point 필요')
+        run_plan(tm, 'clear', seats=load_seats(tm), target_xy=args['point'], max_actions=1)
+        return
     tm.observe_table()
     det = nearest(tm.detect_all(dish_classes(tm) + ['cup']), np.array(args['point'][:2]),
                   tm.g('poke_radius_mm'))
@@ -70,6 +84,9 @@ def clear_dish(tm, args):
 
 # ---------------------------------------------------------------------- 3. 치워(손등 밀기) → 빈 그릇 스스로 찾아 정리
 def clear_empty(tm, args):
+    if tm.g('use_planner'):                          # v2.2: 사람이 '치워' 라고 한 자리(없으면 전부)를 정리
+        run_plan(tm, 'clear', seats=load_seats(tm, _done_seats(args)))
+        return
     tm.observe_table()
     th = tm.g('empty_fill_threshold')
     dets = [d for d in tm.detect_all(dish_classes(tm)) if 0 <= d['fill'] < th]
@@ -83,6 +100,9 @@ def clear_empty(tm, args):
 
 # ---------------------------------------------------------------------- 4. 식사 끝 → 테이블 전체 정리 (그릇 → 컵 → 수저)
 def clear_all(tm, args):
+    if tm.g('use_planner'):
+        run_plan(tm, 'clear', seats=load_seats(tm))
+        return
     groups = tm.layout.get('classes', {})
     order = [dish_classes(tm), groups.get('cups', ['cup']), groups.get('utensils', ['spoon', 'fork', 'chopsticks'])]
     tm.say('정리할게요')
@@ -136,6 +156,21 @@ def seat_setting(tm, args):
                         'saved': time.strftime('%Y-%m-%d %H:%M:%S')}, f)
     tm.get_logger().info(f'자리 {len(seats)}곳 저장: {path}')
     tm.say(f'{len(seats)}명 자리 세팅할게요')
+    if tm.g('use_planner'):                          # v2.2: 보관 자리(DB 재고)에서 먼 자리부터, 음식 그릇은 아래 예전 방식
+        run_plan(tm, 'set_table', seats={i + 1: {'xy': [float(v) for v in s[:2]], 'state': 'EMPTY'}
+                                         for i, s in enumerate(seats)})
+        for seat in seats:
+            s, u, v = seat_frame(seat)
+            for it in tm.layout['seat_layout']:
+                if it.get('from', 'rack') == 'rack':
+                    continue
+                off = it.get('offset', [0, 0])
+                f = tm.layout['foods'][it['food']]
+                src = tm.detect_one(f.get('detect_class', f.get('class', 'bowl'))) \
+                    if f.get('source') == 'detect' else np.array(f['pos'][:3], float)
+                tm.pick(f.get('class', 'bowl'), src)
+                tm.place(f.get('class', 'bowl'), s + off[0] * u + off[1] * v)
+        return
     tm.rack_used = {}
     for i, seat in enumerate(seats):
         s, u, v = seat_frame(seat)

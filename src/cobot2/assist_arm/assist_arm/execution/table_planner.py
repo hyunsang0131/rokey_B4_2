@@ -121,6 +121,10 @@ class TablePlanner:
     def _places(self, kind):
         return self.storage.get(kind, {}) or {}
 
+    def storable(self):
+        """보관 자리(더미·수저통)가 설정된 종류. 세팅은 이 종류만 맡는다 (예: 젓가락은 범위 밖 → 건너뜀)"""
+        return {c.get('type') for kind in ('stacks', 'holders') for c in self._places(kind).values()}
+
     def clear_destination(self, item, storage):
         """정리할 종류 → (자리 이름, 사이트, 위치, 개수, 맨 위 종류) 또는 None (넣을 곳 없음)"""
         for site, kind in (('stack', 'stacks'), ('holder', 'holders')):
@@ -211,8 +215,9 @@ class TablePlanner:
     def _next_set(self, storage, seats, history):
         # 먼 자리부터 놓는다 (놓인 그릇 위로 팔이 지나가지 않게, docs 7장)
         order = sorted(seats, key=lambda k: -float(np.linalg.norm(np.array(seats[k]['xy'][:2], float))))
+        ok = self.storable()
         need = [(k, item, xy) for k in order for item, xy in seat_slots(self.layout, seats[k]['xy'])
-                if (k, item) not in history.placed]
+                if item in ok and (k, item) not in history.placed]
         if not need:
             return PlanResult(DONE)
         cands, why = [], []

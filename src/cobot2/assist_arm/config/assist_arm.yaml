@@ -143,6 +143,7 @@ task_manager:
     waypoints_file: ''        # 비우면 share/assist_arm/config/waypoints.yaml
     table_layout_file: ''     # 비우면 share/assist_arm/config/table_layout.yaml
     dry_run: false
+    use_planner: true         # v2.2: 정리·세팅을 table_planner + 실행기로 (false = 예전 방식: 가까운 순서·고정 정리 자리)
     dry_fake_detections: true
     enable_bring_dish: true
     enable_clear_dish: true

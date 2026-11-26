@@ -443,7 +443,11 @@ CREATE TABLE user_pref (user TEXT, key TEXT, value TEXT, PRIMARY KEY (user, key)
 | `table_planner` (규칙 기반, `PlanResult` 4상태, 위치 기반 그릇 구분, RL `policy` 자리) | `execution/table_planner.py` | 완료, 단위 시험 |
 | `auto_resume`(기본 false), `pause_hold`, `/safety/reset` = 정지 해제·담당자 재개 | `safety/safety_monitor.py`, `config/assist_arm.yaml` | 완료, 노드 단독 실행으로 확인 |
 | `resume` 작업, 쥔 물체 추적(`holding`), 임시 자리 복구 | `execution/task_manager.py`, `skills.py`, `robot_io.py`, `TaskRequest.msg` 주석 | 완료 (실물·dry_run 미확인) |
-| `skills.py` 정리·세팅을 `next_action`으로 연결, `place_stack` | — | **다음 단계** |
+| **실행기** `run_plan()`: 관찰 → `next_action` → 집기·놓기 → DB 기록(`episodes`, `task_log`, `storage_inventory`) → 반복. 상태별 안내(DONE / BLOCKED 이유 / PERCEPTION_FAIL 재관측 2회), 동작 실패는 기록 후 재관측(연속 3회면 중단), 정지·취소는 ABORTED | `execution/executor.py` | **완료**, 단위 시험 7개 + dry_run 확인 |
+| `clear_dish`(콕, 1개), `clear_empty`(자리 번호 또는 전부), `clear_all`, `seat_setting`(보관 재고에서, 먼 자리부터)을 실행기로 연결. 파라미터 `use_planner`(기본 true, false = 예전 방식) | `execution/skills.py`, `task_manager.py`, `config/assist_arm.yaml` | **완료** |
+| 포개기 최소 버전: 더미 위에 놓을 때 `개수 × stack_height_mm`만큼 높게, 더미 맨 위에서 꺼낼 때도 같은 높이 (`pick`/`place`의 `z_offset`). **접촉 감지 하강은 실물 단계에서** | `execution/robot_io.py` | 최소 버전 완료 |
+| 보관 재고 도구: `tools/inventory.py show / seed / set / clear / episodes` (시작 재고는 `table_layout.yaml`의 `initial_inventory`) | `tools/inventory.py` | **완료** |
+| 설정: 임시 자리 4곳, 정리 대상에 컵 추가(임시 자리로), 세팅 템플릿에 포크 추가. 젓가락은 보관 자리가 없어 실행기 세팅에서 건너뜀 | `config/table_layout.yaml` | 완료 (좌표는 자리표시) |
 | 단위 실측 검증, 시각화 변환(`viz_bridge`) | — | 다음 단계 |
 | **v2.3 F**: 실행 프로그램(진입점)을 담당별로 분리 — `hand_perception`(rs_hand_node + webcam_publisher + pose_node, 호연), `object_perception`(spill_node, 은상). 두 런치 파일(`bringup_all`, `perception`)은 그대로 두고 실행 이름만 교체. 예전 이름 `rs_perception`, `webcam_watch`도 남겨 둠. 노드·토픽·서비스 이름은 그대로 | `perception/hand_perception.py`, `perception/object_perception.py`, `setup.py`, `launch/*.launch.py`, README·COMMANDS | **완료**, 빌드·런치 파싱·두 프로그램 단독 실행 확인 |
 | **v2.3 G**: `hand_cam` 메시지 필드, 특징 v3, RealSense 재학습 | — | **미구현** (담당 호연) |

@@ -27,12 +27,14 @@ items:                               # 아이템별 파지 (테이블 기준 높
 racks:                               # 수저·접시·그릇 거치대 (자리 세팅에서 꺼냄). step = 다음 개 위치 차이
   spoon:      {pos: [300.0, -400.0, 0.0], count: 4, step: [0.0, 25.0, 0.0]}
   chopsticks: {pos: [340.0, -400.0, 0.0], count: 4, step: [0.0, 25.0, 0.0]}
+  fork:       {pos: [380.0, -400.0, 0.0], count: 4, step: [0.0, 25.0, 0.0]}   # v2.2 포크 추가 (예전 방식용)
   plate:      {pos: [300.0, 400.0, 0.0], count: 4, step: [0.0, 0.0, 0.0]}
   rice_bowl:  {pos: [380.0, 400.0, 0.0], count: 4, step: [0.0, 0.0, 0.0]}
 
 seat_layout:                         # 콕 짚은 자리 기준 오프셋 [u, v] mm (u: 자리→로봇 쪽, v: 왼쪽)
   - {item: spoon,      offset: [20.0, -150.0], from: rack}
-  - {item: chopsticks, offset: [20.0, -180.0], from: rack}
+  - {item: chopsticks, offset: [20.0, -180.0], from: rack}   # v2.2 table_planner 세팅에서는 범위 밖 (보관 자리 없음 → 건너뜀)
+  - {item: fork,       offset: [20.0, 150.0],  from: rack}   # v2.2 포크 (밥그릇 쪽 반대편)
   - {item: rice_bowl,  offset: [80.0, -60.0],  from: rack}
   - {item: plate,      offset: [80.0, 70.0],   from: rack}
   - {item: side_dish,  offset: [200.0, 0.0],   from: food, food: kimchi}
@@ -57,12 +59,20 @@ storage:
   holders:                           # 수저통 칸 (세워서 꽂음)
     holder_spoon: {type: spoon, pos: [360.0, -230.0], max: 4}
     holder_fork:  {type: fork,  pos: [360.0, -200.0], max: 4}
-  temp_slots:                        # 종류가 애매하거나 더미가 가득 찼을 때 잠깐 두는 자리
+  temp_slots:                        # 종류가 애매하거나(밥/국 모름) 컵, 더미가 가득 찼을 때 두는 자리
     temp_1: {pos: [420.0, -300.0]}
     temp_2: {pos: [420.0, -230.0]}
+    temp_3: {pos: [480.0, -300.0]}
+    temp_4: {pos: [480.0, -230.0]}
   stack_height_mm:                   # 포갤 때 한 개당 높아지는 양 — 그릇 실측 후 교체
     rice_bowl: 15.0
     soup_bowl: 15.0
     plate: 8.0
 type_match_radius_mm: 60.0           # 정리 때 'bowl' 을 자리 템플릿 위치로 밥/국 구분하는 허용 반경
-clear_classes: [rice_bowl, soup_bowl, bowl, plate, spoon, fork]   # 정리 대상 (table_planner)
+clear_classes: [rice_bowl, soup_bowl, bowl, plate, cup, spoon, fork]   # 정리 대상 (table_planner). 컵은 임시 자리로
+initial_inventory:                   # tools/inventory.py seed 가 DB 에 넣는 시작 재고 (세팅 전 보관 상태)
+  stack_A: [soup_bowl, soup_bowl]
+  stack_B: [rice_bowl, rice_bowl]
+  stack_C: [plate]
+  holder_spoon: [spoon, spoon]
+  holder_fork: [fork, fork]

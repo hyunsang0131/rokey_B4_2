@@ -263,14 +263,11 @@ class DataDB:
 
     def log_task(self, episode_id, skill, object_type, src='', dst='', dst_top_type='', success=True,
                  error_code='OK', duration_s=None):
-        """동작 한 번 (pick / place / place_stack …). 성공한 동작이면 episodes.n_actions 도 1 증가"""
-        rid = self._insert('task_log', {
+        """동작 한 번 (pick / place / place_stack …). episodes.n_actions(옮긴 물체 수)는 finish_episode 에서 정함"""
+        return self._insert('task_log', {
             'episode_id': episode_id, 'ts': now_iso(), 'skill': skill, 'object_type': object_type, 'src': src,
             'dst': dst, 'dst_top_type': dst_top_type or '', 'success': int(bool(success)),
             'error_code': error_code, 'duration_s': duration_s})
-        if rid is not None and success and episode_id is not None:
-            self._exec('UPDATE episodes SET n_actions = n_actions + 1 WHERE id=?', (episode_id,), 'n_actions')
-        return rid
 
     # ------------------------------------------------------------ v2.2: 보관 재고 (포개진 그릇은 안 보이므로 DB 가 기준)
     def inventory(self, location=None):

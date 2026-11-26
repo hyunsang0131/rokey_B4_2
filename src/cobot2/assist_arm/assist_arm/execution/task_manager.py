@@ -34,7 +34,9 @@ from assist_arm_msgs.srv import SetSafetyMode
 from assist_arm.common.geometry import load_gripper2cam
 from assist_arm.common.heartbeat import attach_heartbeat
 from assist_arm.execution.robot_io import RobotIO, SafetyAbort, TaskCancelled, TaskFailed
+from assist_arm.common.datadb import DataDB
 from assist_arm.execution.skills import NO_HOME, TASKS, validate_dance
+from assist_arm.execution.table_planner import TablePlanner
 from od_msg.srv import SrvDepthPosition
 
 
@@ -82,6 +84,7 @@ class TaskManager(Node, RobotIO):
         p('wipe_step_mm', 15.0)
         p('dab_sec', 1.5)
         p('open_on_fail', False)
+        p('use_planner', True)              # v2.2: 정리·세팅을 table_planner + 실행기로 (False = 예전 방식)
         p('return_to_observe', True)        # 작업이 끝나면 홈 대신 관찰 자세로 돌아가 스냅샷 후 손동작 대기
         p('start_observing', True)          # 시작하자마자 관찰 자세로            # 실패 시 그리퍼 열기 (물건을 떨어뜨릴 수 있어 기본 off)
         self.g = lambda n: self.get_parameter(n).value  # noqa: E731
@@ -96,6 +99,8 @@ class TaskManager(Node, RobotIO):
         self.stop_flag = self.pause_flag = self.cancel_flag = False
         self.busy = False
         self.holding = None                     # 그리퍼가 쥔 종류 (robot_io.pick/grip 이 갱신)
+        self.planner = TablePlanner(self.layout, workspace=self.wp.get('workspace'))   # v2.2 결정 모듈
+        self.db = DataDB(quiet=False)           # v2.2 작업 기록·보관 재고 (~/data/assist_arm/assist_arm.db)
         self.request = None
         self.palm = None
         self.limits = {}

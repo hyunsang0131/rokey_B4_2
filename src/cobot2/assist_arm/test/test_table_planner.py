@@ -29,7 +29,7 @@ def planner():
 
 
 def test_done_when_nothing_to_clear(planner):
-    r = planner.next_action([det('cup', 500, 0)], {}, mode='clear')   # cup 은 clear_classes 에 없음
+    r = planner.next_action([det('water_bottle', 500, 0)], {}, mode='clear')   # 물병은 정리 대상 아님
     assert r.status == DONE
 
 
@@ -82,7 +82,7 @@ def test_blocked_when_out_of_workspace(planner):
 
 
 def test_blocked_when_storage_full(planner):
-    full = {'stack_B': ['rice_bowl'] * 4, 'temp_1': ['x'], 'temp_2': ['x']}
+    full = {'stack_B': ['rice_bowl'] * 4, 'temp_1': ['x'], 'temp_2': ['x'], 'temp_3': ['x'], 'temp_4': ['x']}
     r = planner.next_action([det('rice_bowl', 500, 0)], full)
     assert r.status == BLOCKED and 'no_space' in r.reason
 

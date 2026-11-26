@@ -158,10 +158,12 @@ class RobotIO:
     def orient(self, item):
         return list(self.item_cfg(item).get('orientation', self.layout.get('place_orientation', [0, 180, 0])))
 
-    def pick(self, item, xyz):
-        """xyz: 베이스 좌표(물체 중심 또는 위 표면). 아이템별 grasp_z(테이블 기준) / pre_lift 사용."""
+    def pick(self, item, xyz, z_offset=0.0):
+        """xyz: 베이스 좌표(물체 중심 또는 위 표면). 아이템별 grasp_z(테이블 기준) / pre_lift 사용.
+        z_offset: 보관 더미 맨 위에서 꺼낼 때 (아래 개수 × 포갬 높이, mm) — v2.2 실행기"""
         c = self.item_cfg(item)
         z = self.table_z + float(c.get('grasp_z', 40.0)) if c.get('use_table_z', True) else xyz[2]
+        z += float(z_offset)
         grasp = [xyz[0], xyz[1], z] + self.orient(item)
         pre = grasp[:2] + [z + float(c.get('pre_lift', 120.0))] + grasp[3:]
         vf = self.speed('speed_free_mms')
@@ -173,9 +175,10 @@ class RobotIO:
         self.holding = item
         self.movel(pre, vf * 0.6)
 
-    def place(self, item, xy, slow=False):
+    def place(self, item, xy, slow=False, z_offset=0.0):
+        """z_offset: 더미 위에 포갤 때 (이미 있는 개수 × 포갬 높이, mm). 접촉 감지 하강은 실물 단계에서 추가"""
         c = self.item_cfg(item)
-        z = self.table_z + float(c.get('place_z', c.get('grasp_z', 40.0)))
+        z = self.table_z + float(c.get('place_z', c.get('grasp_z', 40.0))) + float(z_offset)
         tgt = [xy[0], xy[1], z] + self.orient(item)
         pre = tgt[:2] + [z + float(c.get('pre_lift', 120.0))] + tgt[3:]
         v = self.speed('speed_near_human_mms') if slow else self.speed('speed_free_mms')

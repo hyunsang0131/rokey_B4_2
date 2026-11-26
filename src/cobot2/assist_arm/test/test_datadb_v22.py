@@ -14,9 +14,9 @@ def test_episode_and_task_log(tmp_path):
     assert db.log_task(ep, 'pick', 'rice_bowl', 'seat1', '', success=True)
     assert db.log_task(ep, 'place_stack', 'rice_bowl', 'seat1', 'stack_B', '', success=True)
     assert db.log_task(ep, 'pick', 'soup_bowl', 'seat1', '', success=False, error_code='GRASP_FAIL')
-    db.finish_episode(ep, 'BLOCKED', reason='soup_bowl:out_of_workspace', duration_s=12.5)
+    db.finish_episode(ep, 'BLOCKED', reason='soup_bowl:out_of_workspace', n_actions=1, duration_s=12.5)
     e = db.query('SELECT * FROM episodes WHERE id=?', (ep,))[0]
-    assert e['status'] == 'BLOCKED' and e['success'] == 0 and e['n_actions'] == 2 and e['reason']
+    assert e['status'] == 'BLOCKED' and e['success'] == 0 and e['n_actions'] == 1 and e['reason']
     assert len(db.query('SELECT * FROM task_log WHERE episode_id=?', (ep,))) == 3
 
 
