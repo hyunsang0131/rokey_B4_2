@@ -7,8 +7,8 @@
 
 | 층 | 실행 파일 (`ros2 run assist_arm …`) | 하는 일 |
 |---|---|---|
-| 인식 | `rs_perception` | 손목 RealSense: 손 21점 → 로봇 좌표 3D (관찰 자세에서만), 테이블 얼룩 |
-| 인식 | `webcam_watch` | 웹캠(아무 USB 캠): 안전 감시용 손·상체 (멈춰 손바닥, 손·팔 근접) |
+| 인식 (손, 호연) | `hand_perception` | 손목 RealSense(주): 손 21점 → 로봇 좌표 3D (관찰 자세에서만) + 웹캠(보조): 안전 감시용 손·상체 (멈춰 손바닥, 손·팔 근접) |
+| 인식 (물체, 은상) | `object_perception` | 테이블 얼룩 (물체 검출은 YOLO 컨테이너) |
 | 해석 | `intent_node` | 제스처 + 콕 + 음성 + 애매한 말 해석 → 작업 요청 하나 (`/assist/request`) |
 | 결정·실행 | `task_manager` | 상태 머신 + 동작(skills). 작업 뒤 관찰 자세로 돌아와 식탁 스냅샷 |
 | 결정·실행 | `decision_node` | (선택) 먼저 제안 "물 더 드릴까요?" + 반응으로 학습 |
@@ -58,7 +58,7 @@ docker start yolo-detection && docker exec -it yolo-detection bash
 
 | 명령 | 켜지는 것 | 로봇 |
 |---|---|---|
-| `ros2 launch assist_arm perception.launch.py` | rs_perception, webcam_watch, intent_node (인식·해석 확인) | 안 움직임 |
+| `ros2 launch assist_arm perception.launch.py` | hand_perception, object_perception, intent_node (인식·해석 확인) | 안 움직임 |
 | `ROS_DOMAIN_ID=77 ros2 launch assist_arm dry_run.launch.py` | 전부, task_manager 는 로그만 | 안 움직임 |
 | `ros2 launch assist_arm bringup_all.launch.py` | 전부 | **움직임** |
 
@@ -180,8 +180,8 @@ python3 -c "import sqlite3;c=sqlite3.connect('/home/lee/data/assist_arm/assist_a
 
 | 예전 | 지금 |
 |---|---|
-| `rs_hand_node`, `spill_node` | `rs_perception` (perception/rs_hand.py, perception/spill.py) |
-| `webcam_publisher`, `pose_node` | `webcam_watch` (perception/webcam.py, perception/pose.py) |
+| `rs_hand_node`, `webcam_publisher`, `pose_node` | `hand_perception` (perception/rs_hand.py, webcam.py, pose.py) |
+| `spill_node` | `object_perception` (perception/spill.py) |
 | `gesture_node`, `finger_pointer`, `request_router`, `claude_planner_node`, `voice_command_node` | `intent_node` (intent/*.py) — 노드 이름·토픽은 그대로 |
 | `task_manager`, `subtasks.py`, `robot_io.py` | execution/task_manager.py, execution/skills.py, execution/robot_io.py |
 | `decision_node`, `music_node`, `safety_monitor` | execution/, safety/ 로 이동 (그대로) |

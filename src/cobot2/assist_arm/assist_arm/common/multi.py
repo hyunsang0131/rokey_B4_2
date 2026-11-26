@@ -1,4 +1,4 @@
-"""여러 노드를 한 프로세스에서 같이 돌리기 (rs_perception / webcam_watch / intent_node 공용).
+"""여러 노드를 한 프로세스에서 같이 돌리기 (hand_perception / object_perception / intent_node 공용).
 
 노드 이름·토픽·파라미터는 그대로라 config/assist_arm.yaml 의 노드별 설정이 그대로 적용된다.
 하나가 만들어지다 실패해도(예: MediaPipe 없음) 나머지는 계속 돈다 — 실패 이유는 로그로.

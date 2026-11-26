@@ -34,8 +34,8 @@ def setup(ctx):
     tm = {'dry_run': _b(ctx, 'dry_run'), **{f'enable_{t}': (t in enabled or t in ALWAYS) for t in ALL_TASKS + ALWAYS}}
     dbg = {'show_debug': _b(ctx, 'show_debug')}
     nodes = [
-        Node(package='assist_arm', executable='rs_perception', output='screen', parameters=[P, dbg]),
-        Node(package='assist_arm', executable='webcam_watch', output='screen', parameters=[P, dbg]),
+        Node(package='assist_arm', executable='hand_perception', output='screen', parameters=[P, dbg]),
+        Node(package='assist_arm', executable='object_perception', output='screen', parameters=[P, dbg]),
         Node(package='assist_arm', executable='intent_node', output='screen',
              parameters=[P, {'enabled': _b(ctx, 'voice')}] if _b(ctx, 'voice') else [P]),
         Node(package='assist_arm', executable='safety_monitor', output='screen', parameters=[P]),

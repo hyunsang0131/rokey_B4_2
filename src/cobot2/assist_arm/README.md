@@ -8,7 +8,7 @@
 ## 구조 (4층)
 
 ```
-[인식]   rs_perception (손목 RealSense: 손 21점 3D, 얼룩)      webcam_watch (웹캠: 안전 감시용 손·상체)
+[인식]   hand_perception (호연: 손목 RealSense 손 21점 3D(주) + 웹캠 손·상체(보조))   object_perception (은상: 얼룩) + YOLO 컨테이너
             │ /rs/landmarks /rs/hand_table                         │ /user/landmarks
             ▼                                                       ▼
 [해석]   intent_node (gesture · pointer(콕) · router · planner(로컬/Claude) · voice) ──▶ /assist/request
@@ -37,7 +37,7 @@
 
 ```
 assist_arm/
-  perception/  rs_perception.py (rs_hand, spill), webcam_watch.py (webcam, pose)
+  perception/  hand_perception.py (rs_hand, webcam, pose), object_perception.py (spill)  ※ 예전 rs_perception.py·webcam_watch.py 도 남아 있음
   intent/      intent_node.py (gesture, pointer, router, planner, voice)
   execution/   task_manager.py, skills.py, robot_io.py, decision_node.py, music_node.py
   safety/      safety_monitor.py

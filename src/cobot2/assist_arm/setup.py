@@ -25,6 +25,9 @@ setup(
     entry_points={
         'console_scripts': [
             # 인식층
+            'hand_perception = assist_arm.perception.hand_perception:main',      # v2.3 호연: RealSense 손(주) + 웹캠(보조)
+            'object_perception = assist_arm.perception.object_perception:main',  # v2.3 은상: 얼룩 (YOLO 는 컨테이너)
+            # 예전 이름 (v2.3 전 카메라별 묶음) — 쓰던 명령이 깨지지 않게 남겨 둠. 런치는 위 두 개를 씀
             'rs_perception = assist_arm.perception.rs_perception:main',
             'webcam_watch = assist_arm.perception.webcam_watch:main',
             # 해석층

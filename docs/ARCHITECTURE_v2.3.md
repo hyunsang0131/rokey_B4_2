@@ -8,7 +8,7 @@ v2.1(팀 저장소 `rokey_B4_2`, `ho1` 브랜치 `98f9240`의 **실제 `assist_a
 | # | 항목 | v2.3 결정 | 위치 | 상태 |
 |---|---|---|---|---|
 | E | 손 인식의 주 카메라 | **손목 RealSense가 주(3D 깊이)**, 웹캠은 **보조(2D, 깊이 없음)**. 손동작 학습·인식은 RealSense 기준 | 1.3 | 방향 변경 |
-| F | 인식층 담당 | **손 인식은 호연**(`rs_hand_node`를 은상 → 호연), **물체 인식은 은상**(YOLO + 얼룩). 프로세스를 카메라별이 아니라 **담당(기능)별**로: `hand_perception`(호연), `object_perception`(은상) | 0, 2, 4 | **추가**(런치·진입점 변경) |
+| F | 인식층 담당 | **손 인식은 호연**(`rs_hand_node`를 은상 → 호연), **물체 인식은 은상**(YOLO + 얼룩). 프로세스를 카메라별이 아니라 **담당(기능)별**로: `hand_perception`(호연), `object_perception`(은상) | 0, 2, 4 | **완료**(진입점·런치 변경, 12장) |
 | G | 손동작 3D 입력 | 지금 손동작 모델은 **깊이를 쓰지 않음**(MediaPipe 추정 3D + 이미지 평면 속도). RealSense 깊이 관절(`hand_cam`)을 `/rs/landmarks`에 실어 보내고, 특징 v3로 학습·인식 | 1.3 | **추가** |
 | H | 웹캠의 역할 | 버리지 않음: 로봇 이동 중 안전 감시(손·팔 근접), 이동 중 "멈춤" 손동작, RealSense가 손을 못 볼 때 대체, 상체·사람 위치 | 1.3 | 기존 유지 |
 | I | 정정 | v2.1·v2.2에서 "`/rs/landmarks` 구독 노드 없음"은 **틀림** → `gesture_node`가 파라미터 `rs_landmarks_topic`으로 구독함 | 3.1 | 정정 |
@@ -425,7 +425,7 @@ CREATE TABLE user_pref (user TEXT, key TEXT, value TEXT, PRIMARY KEY (user, key)
 - [ ] `express` 동작이 안전 감시(작업 지점·일시정지) 대상인지
 - [ ] `/spill/result`를 구독하는 노드가 없음: 필요 없는 토픽인지 (`/rs/landmarks`는 gesture_node가 구독함, v2.3 정정)
 - [ ] **(v2.3, 호연)** `UserLandmarks`에 `hand_cam` 추가 → 특징 v3 → RealSense 녹화로 재학습 (1.3 G1~G4)
-- [ ] **(v2.3)** 진입점·런치 변경: `rs_perception`·`webcam_watch` → `hand_perception`(호연) + `object_perception`(은상)
+- [x] **(v2.3)** 진입점·런치 변경: `rs_perception`·`webcam_watch` → `hand_perception`(호연) + `object_perception`(은상) — 완료 (12장)
 - [ ] **(v2.3)** RTMPose를 실행 노드에 넣을지 (`live_compare.py` 비교 결과로 결정)
 - [ ] 저장소에 함께 있는 **`cobot2_interfaces`·`cobot2_hri`**(v1.1 구현)를 남길지 정리할지
 - [ ] `tools/colab_push_dish_rl.ipynb`(접시 밀기 RL)와 `table_planner` RL의 역할 분담
@@ -445,4 +445,17 @@ CREATE TABLE user_pref (user TEXT, key TEXT, value TEXT, PRIMARY KEY (user, key)
 | `resume` 작업, 쥔 물체 추적(`holding`), 임시 자리 복구 | `execution/task_manager.py`, `skills.py`, `robot_io.py`, `TaskRequest.msg` 주석 | 완료 (실물·dry_run 미확인) |
 | `skills.py` 정리·세팅을 `next_action`으로 연결, `place_stack` | — | **다음 단계** |
 | 단위 실측 검증, 시각화 변환(`viz_bridge`) | — | 다음 단계 |
-| **v2.3 변경 (E~J)**: `hand_cam` 메시지 필드, 특징 v3, 재학습, `hand_perception`·`object_perception` 진입점·런치 | — | **미구현** (문서만, 담당 호연·은상) |
+| **v2.3 F**: 실행 프로그램(진입점)을 담당별로 분리 — `hand_perception`(rs_hand_node + webcam_publisher + pose_node, 호연), `object_perception`(spill_node, 은상). 두 런치 파일(`bringup_all`, `perception`)은 그대로 두고 실행 이름만 교체. 예전 이름 `rs_perception`, `webcam_watch`도 남겨 둠. 노드·토픽·서비스 이름은 그대로 | `perception/hand_perception.py`, `perception/object_perception.py`, `setup.py`, `launch/*.launch.py`, README·COMMANDS | **완료**, 빌드·런치 파싱·두 프로그램 단독 실행 확인 |
+| **v2.3 G**: `hand_cam` 메시지 필드, 특징 v3, RealSense 재학습 | — | **미구현** (담당 호연) |
+
+**따로 켜기** (런치 파일을 나누지 않고 프로그램 단위로)
+
+```bash
+ros2 run assist_arm hand_perception --ros-args --params-file $(ros2 pkg prefix assist_arm)/share/assist_arm/config/assist_arm.yaml
+```
+
+```bash
+ros2 run assist_arm object_perception --ros-args --params-file $(ros2 pkg prefix assist_arm)/share/assist_arm/config/assist_arm.yaml
+```
+
+MediaPipe는 시스템 파이썬이 아니라 `~/venvs/assist_mp`에서 불러온다. 그 venv가 없는 PC에서는 `rs_hand_node`·`pose_node`가 시작 실패를 알리고 빠진 채 나머지 노드만 돈다 (`run_nodes`의 기존 동작, 예전 이름으로 실행해도 같음).
